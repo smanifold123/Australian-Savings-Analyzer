@@ -1,0 +1,7 @@
+theme: jekyll-theme-cayman
+title: Australian Savings Analyzer
+description: A modern tool for analysing Australian savings, interest, and compound growth.
+show_downloads: false
+
+include:
+  - css/custom.css
