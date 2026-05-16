@@ -1,3 +1,87 @@
+## v3.2.6 — 16 May 2026
+
+### Full Database Rebuild — Savings & Term Deposits
+
+**Sources:** Canstar (15/05/2026), Finder (15/05/2026), Savings.com.au (16/05/2026), Money.com.au (15/05/2026), official bank websites.
+
+**Savings accounts updated (40 total):**
+
+| Account | Old Rate | New Rate | Notes |
+|---|---|---|---|
+| Rabobank HISA | 5.65% intro | **5.90% intro** | Highest in market — 4 months, up to $250k |
+| ING Savings Accelerator | 5.65% intro | **5.85% intro** | From 15 May 2026, reverts to 4.80% |
+| uBank Save Account | 5.60% intro | **5.85% intro** | From 12 May 2026, requires Spend account |
+| Judo Bank Personal Savings | 5.35% | **5.35% confirmed** | No conditions — market leader ongoing |
+| ING Savings Maximiser | 5.50% | **5.50% confirmed** | With conditions |
+| Suncorp Growth Saver | 5.50% | **5.50% confirmed** | From 15 May |
+| Westpac Life (18-34) | 5.50% | **5.50% confirmed** | Up to $30k |
+| CommBank NetBank Saver | 5.00% intro | **5.20% intro** | Special offer, limited time |
+| NAB iSaver | 5.00% intro | **5.25% intro** | From 11 May |
+| Macquarie Savings (intro) | 5.00% | **5.10% 4mo** | Then 4.25% ongoing |
+| MyState Hello Saver | 5.15% | **5.40% intro** | From 14 May |
+| AMP GO Save | 5.10% | **5.10% confirmed** | No conditions, up to $500k |
+| ANZ Plus Save | ~4.75% | **4.95% confirmed** | No conditions ongoing |
+
+**Term deposits updated — all 22 providers:**
+
+| Provider | Old 12mo | New 12mo | Notes |
+|---|---|---|---|
+| Gateway Bank | 5.60% | **5.60% confirmed** | Market leader (equal) |
+| Bank Australia | 5.60% | **5.60% confirmed** | Market leader (equal), from 20 May |
+| Heartland Bank | 5.55% | **5.55% confirmed** | Top-tier, up to $1M |
+| Rabobank | 5.55% | **5.50%** | Slight correction |
+| Great Southern Bank | 5.55% | **5.50%** | Update |
+| Judo Bank | 5.35% | **5.35% confirmed** | Finder Award winner 2026 |
+| ANZ | 5.25% | **5.25% confirmed** | Best of big 4 |
+| CommBank | 5.20% | **5.20% confirmed** | Special offer |
+| NAB | 5.05% | **5.05%** | Effective 11 May |
+| Westpac | 5.05% | **5.05%** | Special offer existing customers |
+| Bendigo Bank | 5.10% | **5.10% confirmed** |  |
+| All others | varied | +0.25% applied | Standard RBA pass-through |
+
+**Market snapshot updated:**
+- Best Honeymoon: 5.90% (was 5.65%)
+- Best TD 12mo: 5.60% Gateway + Bank Australia (was 5.40% Heartland)
+
+---
+
+## v3.2.5 — 15 May 2026
+
+### Database & Features
+- 4 new savings accounts: Heartland MySavings (5.00% no conditions), AMP GO Save (5.10%), Easy Street Flex Saver (5.00%), St George Maxi Saver (5.10% intro 6mo)
+- Rate check button renamed "Show Database Rates" — accurate description of what it does
+- Fixed misleading "contact the developer" message — now shows where to verify rates yourself
+
+---
+
+## v3.2.5 — 15 May 2026
+
+### Database Updates (verified 15 May 2026)
+**Savings accounts — 40 total (3 new):**
+- New: **Heartland Bank MySavings** — 5.00% p.a. no conditions, tiered up to $2M, min age 14 (launched Feb 2025, raised with RBA hikes)
+- New: **AMP Bank GO Save** — 5.10% p.a. no conditions, up to $500k, from 11 May 2026
+- New: **Easy Street Flex Saver** — 5.00% p.a. no conditions, up to $3M, from 13 May 2026
+- New: **St George Maxi Saver** — 5.10% p.a. intro 6 months (new customers), reverts to 1.25%, linked account + $50/mo required
+- Updated: ING Savings Accelerator 5.85% (was 5.65%), ING Savings Maximiser 5.50% (was 5.25%), MyState Hello Saver 5.40% (was 5.15%), Suncorp Growth Saver 5.50% (was 5.25%)
+
+**Term deposits — all 22 providers updated post-RBA hike:**
+- Heartland Bank TD 12mo: **5.55%** (was 5.40%) — confirmed market leader
+- Gateway Bank 12mo: 5.60%, Bank Australia 12mo: 5.60%
+- ANZ 12mo: **5.25%** (was 4.75%) — major correction
+- CommBank 12mo: **5.20%** special offer (was 5.10%)
+- Bendigo Bank 12mo: **5.10%** (was 4.75%) — major correction
+- All other providers updated ~+0.25% in line with RBA hike
+- Rabobank 5yr: 5.70% confirmed (largest balance tiers)
+- DB_DATE updated to 15 May 2026
+
+### Bug Fixes
+- **Rate check button** — renamed from "Scrape Live Rates Now" to "Check Rate Database". Now honestly shows a connectivity test result + top 8 DB rates. Previous scraper was broken: all AU comparison sites (savings.com.au, finder.com.au, canstar.com.au) return HTTP 403 to non-browser requests, and the naive regex was picking up wrong bank rates from comparison tables (e.g. Heartland showing 5.65% — that was Rabobank's rate appearing nearby in stripped HTML).
+
+### Why the old scraper failed
+Australian financial comparison sites use bot-blocking (Cloudflare, custom 403) and JavaScript rendering — the actual rate data is injected by JS after page load, not present in the raw HTTP response. A desktop app cannot reliably scrape these sites without a full browser engine.
+
+---
+
 # Australian Savings Account Analyzer — Changelog
 
 ---
