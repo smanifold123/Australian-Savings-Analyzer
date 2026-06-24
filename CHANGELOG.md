@@ -1,3 +1,127 @@
+## v3.2.9 — 24 June 2026
+
+### RBA cash rate: live fetch + runtime override
+
+The RBA cash rate, decision date, and next-meeting note are no longer hardcoded in the UI.
+They now flow from a single `RbaInfo` holder that is:
+
+- **Overlaid at startup** from a new optional `rba` section in `rates_override.json`
+  (`rate`, `asOf`, `nextMeeting`, `note`, `environmentDate`) — so you can update the cash rate
+  and meeting schedule without rebuilding.
+- **Fetched live**: "Fetch Live Rates" now also pulls the current cash rate from rba.gov.au
+  (best-effort, never fails the run) and shows it in the Live Rate Review dialog. **Apply to
+  Analysis** writes the cash rate into the override's `rba` section and refreshes the header
+  ticker, the Market Snapshot RBA row, and the About panel immediately.
+- The numeric rate also feeds the AI commentary prompt, so AI analysis uses the current rate.
+
+The shipped `rates_override.json` now reflects the cash rate held at 4.35% on 16 Jun 2026 with the
+next decision on 11 Aug 2026.
+
+> Note: the meeting *schedule* is a fixed RBA calendar and isn't scraped — keep `nextMeeting` in
+> the override file. Everything else (the rate itself) can come from the live fetch.
+
+### "Show Database Rates" button removed
+
+It duplicated the Savings DB / Term Deposits tabs (which already list every embedded rate), so it's
+gone. "Fetch Live Rates" now sits on its own in the Settings panel. The Settings log still shows the
+database summary and override status.
+
+### Notes
+
+- App version → **3.2.9**. Embedded DB stays at 3.2.6 (16 May 2026); current rates ride in the
+  override and the live fetch.
+- Still no new NuGet dependencies.
+
+---
+
+## v3.2.8 — 17 June 2026
+
+### Tier 1.5 — Runtime rate overrides (update rates without rebuilding)
+
+The app now reads a `rates_override.json` file beside the exe at startup and overlays its
+values onto the embedded database. This is the authoritative way to keep rates current
+between releases — no recompile needed.
+
+- **`rates_override.json` loader.** Keyed by account Id (see `AccountData.vb`); every rate
+  field is optional (`MaxRate`, `BaseRate`, `BonusRate`, `IntroRate`, `PostIntroRate` for
+  savings; `R3`–`R60` for term deposits). Rates are `Double` fractions (`0.0575` = 5.75%).
+  Malformed or missing files are ignored — the embedded database stays intact.
+- **"Apply to Analysis" button** added to the Live Rate Review dialog. After a live fetch,
+  this writes the matched rates into `rates_override.json` and reapplies them immediately, so
+  recommendations use the live values (previously the live fetch only updated the snapshot panel).
+- **Today's rates shipped.** A `rates_override.json` with rates verified 17 June 2026 is now
+  included and copied into `build\` by `build.bat`. The About panel shows the override status.
+
+### Free / alternative AI providers
+
+The AI commentary feature is no longer Anthropic-only. Settings now has a **provider
+selector** supporting Anthropic (Claude), xAI (Grok), Groq, Google Gemini, OpenAI, and any
+custom OpenAI-compatible endpoint.
+
+- Free options: **Groq** and **Google Gemini** both offer free tiers.
+- Anthropic uses its native `/v1/messages` API; all other providers use the OpenAI-compatible
+  `/chat/completions` shape (Bearer auth). Provider, model, and base URL persist in `.config.json`.
+- Presets auto-fill the base URL and a sensible default model; **Test** validates the selected
+  provider. The `sk-ant-` key check now applies only when Anthropic is selected.
+
+### Notes
+
+- App version → **3.2.8**. Embedded DB stays at **3.2.6** (16 May 2026); current rates ride in
+  the override file, surfaced as "Rates Override" in About.
+- **Rates-override date now shown consistently:** when an override is active, the header subtitle shows "Rates: {override date}", and both the header and the About "Rates Override" row refresh after **Apply to Analysis** (previously they kept the startup values while the log showed the newer applied date/count).
+- Still no new NuGet dependencies — provider calls use built-in `System.Net.Http`.
+- **Version display fix:** the window title bar previously showed `DB_VERSION` (3.2.6) instead of the app version. Added a dedicated `APP_VERSION` constant in `AccountData.vb`; the title bar, both header subtitles, and the About "Version" row now all read from it, so they can't drift apart again. (DB version stays separate and still shows 3.2.6.)
+- **build.bat hardened:** writes its log to `%TEMP%\savings_analyzer_build.log` (not the project folder, so an editor/file-watcher can't re-trigger on it); deletes the old exe before publishing so success/failure is unambiguous; NSIS installer is opt-in (`build.bat installer`); no `pause` prompt (the window auto-closes), and a re-entry throttle refuses to start if the script was already launched seconds earlier. If a build *loop* persists, the cause is external (an IDE build/watch task or wrapper relaunching it) — run build.bat from a plain Command Prompt with no editor open.
+- Verify provider model names against each vendor's current list (they change); the model field
+  is editable.
+
+---
+
+## v3.2.7 — 17 June 2026
+
+### Live Rate Fetch (Tier 1) — in-app rate checking without a rebuild
+
+The app can now pull current rates from savings.com.au at runtime, review them against
+the built-in database, and persist a market snapshot — no recompilation required.
+
+**What changed:**
+
+- **New "Fetch Live Rates" button** (Settings tab, beside "Show Database Rates"). Performs
+  a live HTTP request to savings.com.au and parses the current rate table.
+- **Fixed the 403 problem.** The previous failure was *not* hard bot-blocking — the default
+  .NET `HttpClient` sends no browser `User-Agent`, which the site rejects. `FetchLiveRates()`
+  now sends real browser headers (`User-Agent`, `Accept`, `Accept-Language`) plus gzip/deflate
+  decompression. Result: HTTP 200 with the full page (~1.0 MB).
+- **Review dialog before anything is saved.** Fetched rates appear in a modal grid
+  (Bank · Live Rate · Type · DB Rate · Diff · page Context). Nothing is applied unless you
+  click *Save as Market Snapshot*.
+- **Snapshot persistence.** Saving writes the top intro + top ongoing rate into
+  `.config.json` via the existing `ScrapedSnapshot`, so the header and Market Snapshot panel
+  show live data on next launch. Manual `AccountData.vb` editing remains the fallback.
+
+**Parser notes:**
+
+- Bank names are matched at word boundaries (so "ING" no longer matches inside "savings").
+- Takes the **highest** plausible rate within a bank's row, not the first — comparison
+  tables list Base Rate before Max Rate, so the first match was the base rate (this is why
+  early testing showed Rabobank at 3.45% instead of 5.35%).
+- Sanity-bounded to 3.0–7.5%; results are auto-detected by proximity and meant for review,
+  not blind trust.
+
+### Build script
+
+- **`build.bat` rewritten.** Removed the duplicate "BUILD SUCCEEDED" banner, consolidated to
+  a single exit path, added `setlocal`, and stripped all non-ASCII characters (the em-dash /
+  box-drawing glyphs were rendering as mojibake under non-UTF-8 codepages).
+
+### Notes
+
+- App version → **3.2.7**. Database version unchanged at **3.2.6** (16 May 2026) — this
+  release adds a feature, not new rate data.
+- No new NuGet dependencies (live fetch uses built-in `System.Net.Http`).
+
+---
+
 ## v3.2.6 — 16 May 2026
 
 ### Full Database Rebuild — Savings & Term Deposits

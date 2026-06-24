@@ -1,9 +1,9 @@
 # 🏛 Australian Savings Account Analyzer
-### Desktop Edition · v3.2.6 · VB.NET + WinForms · No browser required
+### Desktop Edition · v3.2.9 · VB.NET + WinForms · No browser required
 
 A professional-grade Australian savings account comparison tool that analyses 40 savings accounts and 22 term deposit providers against your personal financial profile. All calculations run completely offline. No subscription. No ads.
 
-**RBA Cash Rate: 4.35% p.a.** (raised 5 May 2026) · Data verified: 16 May 2026
+**RBA Cash Rate: 4.35% p.a.** (held 16 Jun 2026 · next meeting 11 Aug 2026) · Embedded data verified: 16 May 2026
 
 ---
 
@@ -13,11 +13,20 @@ A professional-grade Australian savings account comparison tool that analyses 40
 Download the **Windows x64 Installer**: https://dotnet.microsoft.com/download/dotnet/8.0
 
 **Step 2 — Run build.bat**
-Double-click `build.bat` in the `SavingsAnalyzer_Build` folder.
-Output: `build\AustralianSavingsAnalyzer.exe` (~160MB self-contained, no install needed)
+Double-click `build.bat` in the `SavingsAnalyzer_Build` folder, or run it from a Command Prompt.
+It runs steps [1]–[6], then auto-closes (no "press any key" prompt). The build log is written to
+`%TEMP%\savings_analyzer_build.log`.
+Output: `build\AustralianSavingsAnalyzer.exe` (~160MB self-contained, no install needed), with
+`rates_override.json` copied in beside it.
+
+> **If build.bat appears to "loop"** (re-runs every few seconds and never closes): the script
+> itself exits cleanly, so an external tool is relaunching it — almost always a code editor with a
+> build/watch task, or the project folder open in an IDE that rebuilds on change. Close the editor
+> and run `build.bat` from a plain Command Prompt (Win+R → `cmd`). A built-in throttle also refuses
+> to start if it was launched seconds earlier.
 
 **Step 3 (optional) — Build installer**
-Install NSIS from https://nsis.sourceforge.io/Download then re-run `build.bat` to produce `AustralianSavingsAnalyzer_Setup.exe`.
+Install NSIS from https://nsis.sourceforge.io/Download, then run `build.bat installer` to produce the setup. The installer is opt-in and skipped by default.
 
 ---
 
@@ -108,7 +117,13 @@ Saved profiles from previous analyses. Select a row and click **Load & Re-Analys
 
 **API Key** — optional, for AI commentary (see below).
 
-**Show Database Rates** — displays the rates built into this version with the verification date, and tests connectivity to savings.com.au. Rates are embedded in the app and updated with each version — this button shows what's in the current build so you can compare against what you see on comparison sites.
+**Fetch Live Rates** — pulls current savings rates from savings.com.au *and* the current RBA cash rate from rba.gov.au at runtime, then opens a review window comparing savings rates against the built-in database (Bank · Live Rate · Type · DB Rate · Diff · page context), with the detected RBA rate shown in the header. Two actions:
+- **Save as Market Snapshot** stores the top intro/ongoing rate so the header and Market Snapshot panel reflect live data on next launch.
+- **Apply to Analysis** writes the matched savings rates *and* the RBA cash rate into `rates_override.json` and applies them immediately, so recommendations and the RBA display update without a rebuild.
+
+Detected rates are auto-matched by proximity — eyeball them against the context column before applying; manual `AccountData.vb` / `rates_override.json` editing remains the authoritative fallback.
+
+> The current database rates are always visible on the **Savings DB** and **Term Deposits** tabs, so there's no separate "show rates" button.
 
 ---
 
@@ -121,7 +136,7 @@ Saved profiles from previous analyses. Select a row and click **Load & Re-Analys
 | Best Ongoing Bonus | **5.50% p.a.** | ING Maximiser, Westpac Life (18–34), MOVE, Suncorp |
 | Best TD (12 months) | **5.60% p.a.** | Gateway Bank + Bank Australia |
 | Best TD (5 years) | **5.70% p.a.** | Rabobank ($500k–$2m) |
-| RBA Cash Rate | **4.35% p.a.** | Raised 5 May 2026 — next meeting June 2026 |
+| RBA Cash Rate | **4.35% p.a.** | Held 16 Jun 2026 — next meeting 11 Aug 2026 |
 
 ---
 
@@ -132,36 +147,60 @@ Click the **☀/✱** button (top-right header) to toggle themes. Both themes fu
 
 ## AI Fund Manager (Optional)
 
-> ⚠️ **Requires a separate paid Anthropic API account — NOT included with Claude Pro.**
-> Claude Pro gives you access to claude.ai (the chat interface). The API is a separate developer product at console.anthropic.com with its own billing.
+> The AI commentary is optional. **All calculations and rankings run locally** — AI only adds written commentary. You can pick from several providers, including **free** ones.
+
+### Supported providers
+Choose in **Settings → Provider**:
+
+| Provider | Cost | Notes |
+|---|---|---|
+| Anthropic (Claude) | Paid | Native API (`sk-ant-` key). Not included with Claude Pro — separate billing at console.anthropic.com. |
+| xAI (Grok) | Paid (free credits sometimes) | OpenAI-compatible, `api.x.ai`. |
+| **Groq** | **Free tier** | OpenAI-compatible, fast inference, `api.groq.com`. |
+| **Google Gemini** | **Free tier** | OpenAI-compatible mode, `generativelanguage.googleapis.com`. |
+| OpenAI | Paid | `api.openai.com`. |
+| Custom | — | Any OpenAI-compatible endpoint (e.g. local Ollama). |
+
+Anthropic uses its native `/v1/messages` API; every other provider uses the OpenAI-compatible
+`/chat/completions` shape with a Bearer key. Provider, model, and base URL are saved in `.config.json`.
 
 ### What AI adds
-Without AI the app gives fully accurate calculations and ranked recommendations. With AI each card also includes:
-- **Personalised overview** — addresses you by name, contextualises your situation
-- **Detailed "Why it fits"** — reasoning specific to your age, goal, deposit habits
-- **Personalised action steps** — specific monthly steps, not generic instructions
-- **Cautions** — warnings relevant to your specific profile
-- **Strategy tip** — broader wealth observation (TD laddering, split strategy, etc.)
-- **Tax note** — reminder about marginal tax on interest income
-
-The AI does NOT change the numbers — calculations and rankings are always done locally.
+Personalised overview (by name), detailed "why it fits", monthly action steps, profile-specific
+cautions, a strategy tip, and a tax note. The AI does **not** change the numbers.
 
 ### Setup
-1. Go to **console.anthropic.com/settings/billing** — add credits (US$5 covers 500+ analyses)
-2. Go to **console.anthropic.com/settings/keys** — create a key (starts `sk-ant-`)
-3. In app: **Settings** → paste key → **Save Key** → **Test** to verify
+1. Pick a provider in **Settings → Provider** (the base URL and a default model auto-fill).
+2. Create a key with that provider (Groq and Gemini have free tiers).
+3. Paste the key → **Save** → **Test** to verify. Adjust the **Model** field if needed — vendor
+   model names change over time.
 
 ### Cost
-~US$0.005–0.01 per full AI analysis. Uses `claude-sonnet-4-6`.
+Anthropic `claude-sonnet-4-6`: ~US$0.005–0.01 per analysis. Groq/Gemini free tiers: $0 within limits.
+
+---
+
+## Updating Rates Without Rebuilding (rates_override.json)
+
+The app reads **`rates_override.json`** (beside the exe) at startup and overlays it on the embedded
+database — so you can refresh rates without recompiling.
+
+- Keyed by account Id (see `AccountData.vb`); all fields optional. Rates are decimals: `0.0575` = 5.75%.
+- An optional **`rba`** section sets the cash rate and meeting info: `rate` (decimal), `asOf`, `nextMeeting`, `note`, `environmentDate`. The cash rate can also be filled by the live fetch; the meeting schedule is maintained here by hand.
+- Edit the file and relaunch; delete it to fall back to embedded rates. Status shows in **About**.
+- **Settings → Fetch Live Rates → Apply to Analysis** writes matched savings rates *and* the RBA cash rate into this file for you.
+- `build.bat` copies the project-root `rates_override.json` into `build\` on each build, so the
+  shipped build carries the latest rates.
 
 ---
 
 ## Data Sources & Accuracy
 
-Rates sourced from: Canstar, Finder, Savings.com.au, Money.com.au, official bank websites.
-**Verification date: 16 May 2026**
+Rates sourced from: Canstar, Finder, Savings.com.au, Money.com.au, rba.gov.au, official bank websites.
+**Embedded verification date: 16 May 2026** · current rates ride in `rates_override.json` (24 June 2026).
 
-Note: Australian bank and comparison sites block automated HTTP scraping. Rates in this app are manually verified from primary sources before each release. Always verify with your bank before committing.
+Note: Australian bank and comparison sites block default HTTP clients (they reject requests with no
+browser User-Agent). The in-app live fetch sends browser headers to work around this, but parsed
+rates are auto-detected and should be reviewed before saving. Always verify with your bank before committing.
 
 **Government guarantee:** Australia's FCS (APRA) protects deposits up to **$250,000 per person per ADI**. BOQ, ME Bank, Virgin Money Australia, and BOQ Specialist are all the same ADI for FCS purposes.
 
@@ -189,6 +228,9 @@ Educational and informational purposes only. Not financial advice. Consult a qua
 
 | Version | Date | Changes |
 |---|---|---|
+| **3.2.9** | 24 June 2026 | RBA cash rate now live-fetched (rba.gov.au) and runtime-overridable via the `rba` section of `rates_override.json` — Apply to Analysis persists it and refreshes the header, Market Snapshot, and About instantly; the rate also feeds the AI prompt. Removed the redundant "Show Database Rates" button (the Savings DB / Term Deposits tabs already list every rate). |
+| **3.2.8** | 17 June 2026 | Tier 1.5: `rates_override.json` overlay — update rates at runtime without rebuilding (loaded at startup, copied into build by build.bat, today's rates shipped). "Apply to Analysis" button writes live-fetched rates into the override so recommendations use them. Multi-provider AI: Anthropic, xAI Grok, Groq (free), Google Gemini (free), OpenAI, or custom OpenAI-compatible endpoint. Fixed title-bar version (now from a single `APP_VERSION` constant). build.bat: log moved to `%TEMP%`, no pause / auto-close, re-entry throttle, opt-in installer. |
+| **3.2.7** | 17 June 2026 | Live Rate Fetch (Tier 1): new "Fetch Live Rates" button pulls current rates from savings.com.au at runtime with a review-before-save dialog and persistent market snapshot — no rebuild needed. Fixed the savings.com.au 403 (default HttpClient had no browser User-Agent). Parser takes the highest rate per bank row (was grabbing base rate) and matches bank names at word boundaries. build.bat rewritten (single exit, ASCII-clean). Database unchanged at v3.2.6. |
 | **3.2.6** | 16 May 2026 | Full database rebuild: Rabobank HISA 5.90% (was 5.65%), ING Accelerator 5.85% (was 5.65%), uBank Save 5.85% (was 5.60%), all 22 TDs updated post-RBA. Gateway Bank + Bank Australia now lead at 5.60% 12mo. Judo Bank confirmed 5.35% no conditions. Market snapshot updated. |
 | 3.2.5 | 15 May 2026 | 4 new savings accounts added (Heartland MySavings, AMP GO Save, Easy Street Flex Saver, St George Maxi Saver). Rate check button renamed to "Show Database Rates". Honest description of what the button does. |
 | 3.2.4 | 5 May 2026 | Profile save fixed (ProfileDto). Profiles grid dock order fixed. Export button gold tag. Rate label spacing. Gold grid row selection. RBA updated to 4.35%. Scraped rates persist. |
